@@ -16,22 +16,21 @@
     <param name="runtime_pos_log_enable" type="bool" value="0" />
     <node pkg="fast_lio" type="fastlio_mapping" name="laserMapping" output="screen" /> 
 
-    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio)/rviz_cfg/world.rviz" /> -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio)/rviz_cfg/world.rviz" />
 
     <group if="$(arg rviz)">
     <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find fast_lio)/rviz_cfg/loam_livox.rviz" />
     </group>
+
+    <!-- global positioning: -->
+    <node pkg="fast_lio" name="global_positioning" type="global_position_node.py" output="screen"/>
+
 
     <!-- static tf transform -->
     <node pkg="tf2_ros"
        type="static_transform_publisher"
        name="lidar_to_base"
        args="0 0 0 0 0 0 base_link os_sensor" />
-
-    <node pkg="tf2_ros"
-       type="static_transform_publisher"
-       name="imu_to_base"
-       args="0 0 0 0 0 0 base_link imu_link" />
        
     <!-- run pointcloud_to_laserscan node -->
     <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
