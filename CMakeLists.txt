@@ -73,10 +73,9 @@ add_message_files(
   Pose6D.msg
 )
 
-add_service_files(
-  FILES
-  global_positioning.srv
-)
+# add_service_files(
+#   FILES
+# )
 
 generate_messages(
  DEPENDENCIES

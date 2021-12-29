@@ -1,0 +1,25 @@
+<launch>
+
+  <arg name="cmd_vel_out" default="/cmd_vel"/>
+
+  <arg name="config_locks"  default="$(find fast_lio)/config/manager_locks.yaml"/>
+  <arg name="config_topics" default="$(find fast_lio)/config/manager_topics.yaml"/>
+
+  <!-- twist-mux node -->
+  <node pkg="twist_mux" type="twist_mux" name="twist_mux" output="screen">
+    <remap from="cmd_vel_out" to="$(arg cmd_vel_out)"/>
+
+    <rosparam file="$(arg config_locks)"  command="load"/>
+    <rosparam file="$(arg config_topics)" command="load"/>
+  </node>
+
+  <!-- plane reset period -->
+  <param name="reset_period" type="double" value="10.0"/>
+
+  <!-- global positioning: -->
+  <node pkg="fast_lio" name="global_positioning" type="global_position_node.py" output="screen"/>
+
+  <!-- global manager node -->
+  <node pkg="fast_lio" name="manager" type="manager_node.py" output="screen"/>
+
+</launch>

@@ -98,13 +98,13 @@ bool   scan_pub_en = false, dense_pub_en = false, scan_body_pub_en = false;
 
 // ======= world position =================
 
-double global_px = 0.0;
-double global_py = 0.0;
-double global_pz = 0.0;
-double global_ox = 0.0;
-double global_oy = 0.0;
-double global_oz = 0.0;
-double global_ow = 1.0; 
+// double global_px = 0.0;
+// double global_py = 0.0;
+// double global_pz = 0.0;
+// double global_ox = 0.0;
+// double global_oy = 0.0;
+// double global_oz = 0.0;
+// double global_ow = 1.0; 
 
 // ======= world position =================
 
@@ -381,19 +381,19 @@ void imu_cbk(const sensor_msgs::Imu::ConstPtr &msg_in)
 }
 
 // TODO: external imu callback function
-bool plane_set = false;
-tf::Quaternion old_q;
-double time_diff_two_imus = 0.0;
+// bool plane_set = false;
+// tf::Quaternion old_q;
+// double time_diff_two_imus = 0.0;
 
-void global_info_cb(const geometry_msgs::Pose::ConstPtr& msg) {
-    global_px = msg->position.x;
-    global_py = msg->position.y;
-    global_pz = msg->position.z;
-    global_ox = msg->orientation.x;
-    global_oy = msg->orientation.y;
-    global_oz = msg->orientation.z;
-    global_ow = msg->orientation.w;
-}
+// void global_info_cb(const geometry_msgs::Pose::ConstPtr& msg) {
+//     global_px = msg->position.x;
+//     global_py = msg->position.y;
+//     global_pz = msg->position.z;
+//     global_ox = msg->orientation.x;
+//     global_oy = msg->orientation.y;
+//     global_oz = msg->orientation.z;
+//     global_ow = msg->orientation.w;
+// }
 
 // void external_imu_cbk (const sensor_msgs::Imu::ConstPtr &msg_in) 
 // {   
@@ -423,8 +423,6 @@ void global_info_cb(const geometry_msgs::Pose::ConstPtr& msg) {
 //     mtx_buffer.unlock();
 //     sig_buffer.notify_all();
 // }
-
-
 
 double lidar_mean_scantime = 0.0;
 int    scan_num = 0;
@@ -683,34 +681,34 @@ void publish_odometry(const ros::Publisher & pubOdomAftMapped)
     /* TODO: add base_link_plane */
     /*****************************/
 
-    tf::Quaternion odom_world_quat;
-    odom_world_quat.setX(global_ox);
-    odom_world_quat.setY(global_oy);
-    odom_world_quat.setZ(global_oz);
-    odom_world_quat.setW(global_ow);
+    // tf::Quaternion odom_world_quat;
+    // odom_world_quat.setX(global_ox);
+    // odom_world_quat.setY(global_oy);
+    // odom_world_quat.setZ(global_oz);
+    // odom_world_quat.setW(global_ow);
 
-    tf::Transform world_to_odom;
-    world_to_odom.setOrigin(tf::Vector3(global_px, global_py, global_pz));
-    world_to_odom.setRotation(odom_world_quat);
-    br.sendTransform(tf::StampedTransform(world_to_odom, odomAftMapped.header.stamp, "world", "odom" ));
+    // tf::Transform world_to_odom;
+    // world_to_odom.setOrigin(tf::Vector3(global_px, global_py, global_pz));
+    // world_to_odom.setRotation(odom_world_quat);
+    // br.sendTransform(tf::StampedTransform(world_to_odom, odomAftMapped.header.stamp, "world", "odom" ));
             
-    tf::Transform world_to_base; 
+    // tf::Transform world_to_base; 
     
-    world_to_base = world_to_odom * odom_to_base;
+    // world_to_base = world_to_odom * odom_to_base;
 
-    double roll, pitch, yaw;
-    tf::Matrix3x3 delta_matrix(world_to_base.getRotation());
-    delta_matrix.getRPY(roll, pitch, yaw);
-    tf::Quaternion new_quat;
-    new_quat.setRPY(0, 0, yaw);
+    // double roll, pitch, yaw;
+    // tf::Matrix3x3 delta_matrix(world_to_base.getRotation());
+    // delta_matrix.getRPY(roll, pitch, yaw);
+    // tf::Quaternion new_quat;
+    // new_quat.setRPY(0, 0, yaw);
 
-    tf::Transform world_to_base_plane;
-    world_to_base_plane.setOrigin(world_to_base.getOrigin());
-    world_to_base_plane.setRotation(new_quat);
+    // tf::Transform world_to_base_plane;
+    // world_to_base_plane.setOrigin(world_to_base.getOrigin());
+    // world_to_base_plane.setRotation(new_quat);
 
-    tf::Transform odom_to_base_plane;
-    odom_to_base_plane = world_to_odom.inverse() * world_to_base_plane; 
-    br.sendTransform( tf::StampedTransform(odom_to_base_plane, odomAftMapped.header.stamp, "odom", "base_link_plane"));
+    // tf::Transform odom_to_base_plane;
+    // odom_to_base_plane = world_to_odom.inverse() * world_to_base_plane; 
+    // br.sendTransform( tf::StampedTransform(odom_to_base_plane, odomAftMapped.header.stamp, "odom", "base_link_plane"));
 }
 
 void publish_path(const ros::Publisher pubPath)
@@ -951,12 +949,8 @@ int main(int argc, char** argv)
 
     // TODO: 
     // external IMU subscriber
-    ros::Subscriber sub_global_info = nh.subscribe("/fast_lio/global_info", 1, global_info_cb);
+    // ros::Subscriber sub_global_info = nh.subscribe("/fast_lio/global_info", 1, global_info_cb);
     // ros::Subscriber sub_external_imu = nh.subscribe("/imu/data", 1, external_imu_cbk);
-    // global_positioning service
-    // ros::ServiceServer gp_service = nh.advertiseService("/fast_lio/pose_correction", global_positioning);
-    // service client
-    // gp_client = nh.serviceClient<fast_lio::global_positioning>("/fast_lio/pose_correction");
 
 //------------------------------------------------------------------------------------------------------
     signal(SIGINT, SigHandle);
