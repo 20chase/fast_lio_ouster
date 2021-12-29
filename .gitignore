@@ -5,4 +5,5 @@ Log/*.csv
 Log/*.pdf
 .vscode/c_cpp_properties.json
 .vscode/settings.json
-PCD/*.pcd
+PCD/
+launch/.ipynb_checkpoints/
