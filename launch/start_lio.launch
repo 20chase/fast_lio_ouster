@@ -1,38 +1,42 @@
 <launch>
     <include file="$(find ouster_ros)/os1_32.launch"/>
-    <include file="$(find openzen_sensor)/launch/lpms_cu2.launch"/>
+    <!-- <include file="$(find openzen_sensor)/launch/lpms_cu2.launch"/> -->
+    <include file="$(find fdilink_ahrs)/launch/ahrs_driver.launch"/>
     <include file="$(find fast_lio)/launch/mapping_ouster32.launch"/>
     
-      <node pkg="tf2_ros" 
-        type="static_transform_publisher" 
-        name="lidar_to_base" 
-        args="0.0 0 0.0 0 0 0 base_link os_sensor" />
+    <node pkg="tf2_ros" 
+      type="static_transform_publisher" 
+      name="lidar_to_base" 
+      args="0.0 0 0.0 0 0 0 base_link os_sensor" />
+      
+    <!-- global manager -->
+    <include file="$(find fast_lio)/launch/global_manager.launch"/>
         
-      <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
-        <!-- <remap from="cloud_in" to="/velodyne_points"/> -->
-        <remap from="cloud_in" to="/os_cloud_node/points"/>
-        <remap from="scan" to="/scan360"/>
-        <rosparam>
-            target_frame: base_link_plane # Leave disabled to output scan in pointcloud frame
-            transform_tolerance: 0.2
-            min_height: 0.0
-            max_height: 0.5
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+      <!-- <remap from="cloud_in" to="/velodyne_points"/> -->
+      <remap from="cloud_in" to="/os_cloud_node/points"/>
+      <remap from="scan" to="/scan360"/>
+      <rosparam>
+          target_frame: base_link_plane # Leave disabled to output scan in pointcloud frame
+          transform_tolerance: 0.2
+          min_height: 0.0
+          max_height: 0.5
 
-            angle_min: -3.141592653589793 # -M_PI
-            angle_max: 3.141592653589793 # M_PI
-            angle_increment: 0.017453292519943295 # 0.017 rad /degree
-            scan_time: 0.1
-            range_min: 0.01
-            range_max: 20
-            use_inf: true
-            inf_epsilon: 1.0
+          angle_min: -3.141592653589793 # -M_PI
+          angle_max: 3.141592653589793 # M_PI
+          angle_increment: 0.017453292519943295 # 0.017 rad /degree
+          scan_time: 0.1
+          range_min: 0.01
+          range_max: 20
+          use_inf: true
+          inf_epsilon: 1.0
 
-            # Concurrency level, affects number of pointclouds queued for processing and number of threads used
-            # 0 : Detect number of cores
-            # 1 : Single threaded
-            # 2->inf : Parallelism level
-            concurrency_level: 1
-        </rosparam>
-    </node>
+          # Concurrency level, affects number of pointclouds queued for processing and number of threads used
+          # 0 : Detect number of cores
+          # 1 : Single threaded
+          # 2->inf : Parallelism level
+          concurrency_level: 1
+      </rosparam>
+  </node>
     
 </launch>
