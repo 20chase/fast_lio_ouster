@@ -1,6 +1,7 @@
 <launch>
     <include file="$(find ouster_ros)/os1_32.launch"/>
-    <include file="$(find openzen_sensor)/launch/lpms_cu2.launch"/>
+    <!-- <include file="$(find openzen_sensor)/launch/lpms_cu2.launch"/> -->
+    <include file="$(find fdilink_ahrs)/launch/ahrs_driver.launch"/>
     <include file="$(find fast_lio)/launch/mapping_ouster32.launch"/>
     
       <node pkg="tf2_ros" 
