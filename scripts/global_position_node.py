@@ -148,15 +148,17 @@ class GlobalPositionNode:
              msg.orientation.w])
 
         self.imu_buffer.append(np.array(imu_euler))
-        self.imu_timestamp_buffer.append(np.array(msg.header.stamp.to_sec()))
+        # TODO: time difference betwwen external IMU and internal IMU
+        # find a method to solve this, temporally use a time shift (5.0)
+        self.imu_timestamp_buffer.append(np.array(msg.header.stamp.to_sec() + 5.0))
         if len(self.imu_buffer) > 20:
             self.imu_buffer.pop(0)
             self.imu_timestamp_buffer.pop(0)
 
         self.imu_euler = np.mean(self.imu_buffer, axis=0)
-        self.imu_timestamp = np.mean(self.imu_timestamp_buffer, axis=0)
+        # self.imu_timestamp = np.mean(self.imu_timestamp_buffer, axis=0)
         # self.imu_euler = self.imu_buffer[-1]
-        # self.imu_timestamp = self.imu_timestamp_buffer[-1]
+        self.imu_timestamp = self.imu_timestamp_buffer[-1]
 
         self.imu_info_received = True
 
