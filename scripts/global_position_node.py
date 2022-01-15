@@ -123,8 +123,8 @@ class GlobalPositionNode:
                 "world",
                 "base_link", 
                 rospy.Time(0))
-        except (tf.LookupException, tf.ConnectivityException) as e:
-            rospy.logwarn("{}".format(e))
+        except:
+            # ignore all exception
             return
 
         euler_w2b = tf.transformations.euler_from_quaternion(quat_w2b)
