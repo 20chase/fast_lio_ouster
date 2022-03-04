@@ -90,7 +90,7 @@ double last_timestamp_lidar = 0, last_timestamp_imu = -1.0;
 double gyr_cov = 0.1, acc_cov = 0.1, b_gyr_cov = 0.0001, b_acc_cov = 0.0001;
 double filter_size_corner_min = 0, filter_size_surf_min = 0, filter_size_map_min = 0, fov_deg = 0;
 double cube_len = 0, HALF_FOV_COS = 0, FOV_DEG = 0, total_distance = 0, lidar_end_time = 0, first_lidar_time = 0.0;
-int    effct_feat_num = 0, time_log_counter = 0, scan_count = 0, publish_count = 0;
+int    effct_feat_num = 0, dynamic_feat_num = 0, time_log_counter = 0, scan_count = 0, publish_count = 0;
 int    iterCount = 0, feats_down_size = 0, NUM_MAX_ITERATIONS = 0, laserCloudValidNum = 0, pcd_save_interval = -1, pcd_index = 0;
 bool   point_selected_surf[100000] = {0};
 bool   lidar_pushed, flg_first_scan = true, flg_exit = false, flg_EKF_inited;
@@ -124,6 +124,7 @@ PointCloudXYZI::Ptr feats_down_body(new PointCloudXYZI());
 PointCloudXYZI::Ptr feats_down_world(new PointCloudXYZI());
 PointCloudXYZI::Ptr normvec(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr laserCloudOri(new PointCloudXYZI(100000, 1));
+PointCloudXYZI::Ptr laserCloudDynamic(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr corr_normvect(new PointCloudXYZI(100000, 1));
 PointCloudXYZI::Ptr _featsArray;
 
@@ -483,8 +484,37 @@ bool sync_packages(MeasureGroup &meas)
     return true;
 }
 
+void publish_add_points(
+    const ros::Publisher & pubAddPoint, 
+    const PointVector & PointToAdd, 
+    const PointVector & PointNoNeedDownsample)
+{
+    PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI(PointToAdd.size() + PointNoNeedDownsample.size(), 1));
+    for (int i = 0; i < PointToAdd.size(); i++)
+    {
+        laserCloudWorld->points[i].x = PointToAdd[i].x;
+        laserCloudWorld->points[i].y = PointToAdd[i].y;
+        laserCloudWorld->points[i].z = PointToAdd[i].z;
+        laserCloudWorld->points[i].intensity = 0.0;
+    }
+    for (int i = 0; i < PointNoNeedDownsample.size(); i++)
+    {
+        laserCloudWorld->points[PointToAdd.size()+i].x = PointNoNeedDownsample[i].x;
+        laserCloudWorld->points[PointToAdd.size()+i].y = PointNoNeedDownsample[i].y;
+        laserCloudWorld->points[PointToAdd.size()+i].z = PointNoNeedDownsample[i].z;
+        laserCloudWorld->points[PointToAdd.size()+i].intensity = 1.0;
+    }
+
+    sensor_msgs::PointCloud2 laserCloudFullRes3;
+    pcl::toROSMsg(*laserCloudWorld, laserCloudFullRes3);
+    laserCloudFullRes3.header.stamp = ros::Time().fromSec(lidar_end_time);
+    laserCloudFullRes3.header.frame_id = "odom";
+    pubAddPoint.publish(laserCloudFullRes3);
+
+}
+
 int process_increments = 0;
-void map_incremental()
+void map_incremental(const ros::Publisher & pubAddPoint)
 {
     PointVector PointToAdd;
     PointVector PointNoNeedDownsample;
@@ -505,14 +535,17 @@ void map_incremental()
             mid_point.y = floor(feats_down_world->points[i].y/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
             mid_point.z = floor(feats_down_world->points[i].z/filter_size_map_min)*filter_size_map_min + 0.5 * filter_size_map_min;
             float dist  = calc_dist(feats_down_world->points[i],mid_point);
-            if (fabs(points_near[0].x - mid_point.x) > 0.5 * filter_size_map_min && fabs(points_near[0].y - mid_point.y) > 0.5 * filter_size_map_min && fabs(points_near[0].z - mid_point.z) > 0.5 * filter_size_map_min){
+            if (fabs(points_near[0].x - mid_point.x) > 0.5 * filter_size_map_min && 
+                fabs(points_near[0].y - mid_point.y) > 0.5 * filter_size_map_min && 
+                fabs(points_near[0].z - mid_point.z) > 0.5 * filter_size_map_min) 
+            {
                 PointNoNeedDownsample.push_back(feats_down_world->points[i]);
                 continue;
             }
             for (int readd_i = 0; readd_i < NUM_MATCH_POINTS; readd_i ++)
             {
                 if (points_near.size() < NUM_MATCH_POINTS) break;
-                if (calc_dist(points_near[readd_i], mid_point) < dist)
+                if (calc_dist(points_near[readd_i], mid_point) < 0.5 * dist)
                 {
                     need_add = false;
                     break;
@@ -531,6 +564,7 @@ void map_incremental()
     ikdtree.Add_Points(PointNoNeedDownsample, false); 
     add_point_size = PointToAdd.size() + PointNoNeedDownsample.size();
     kdtree_incremental_time = omp_get_wtime() - st_time;
+    publish_add_points(pubAddPoint, PointToAdd, PointNoNeedDownsample);
 }
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
@@ -622,6 +656,22 @@ void publish_effect_world(const ros::Publisher & pubLaserCloudEffect)
     laserCloudFullRes3.header.stamp = ros::Time().fromSec(lidar_end_time);
     laserCloudFullRes3.header.frame_id = "odom";
     pubLaserCloudEffect.publish(laserCloudFullRes3);
+}
+
+void publish_dynamic_world(const ros::Publisher & pubLaserCloudDynamic)
+{
+    PointCloudXYZI::Ptr laserCloudWorld( \
+                    new PointCloudXYZI(dynamic_feat_num, 1));
+    for (int i = 0; i < dynamic_feat_num; i++)
+    {
+        RGBpointBodyToWorld(&laserCloudDynamic->points[i], \
+                            &laserCloudWorld->points[i]);
+    }
+    sensor_msgs::PointCloud2 laserCloudFullRes3;
+    pcl::toROSMsg(*laserCloudWorld, laserCloudFullRes3);
+    laserCloudFullRes3.header.stamp = ros::Time().fromSec(lidar_end_time);
+    laserCloudFullRes3.header.frame_id = "odom";
+    pubLaserCloudDynamic.publish(laserCloudFullRes3);
 }
 
 void publish_map(const ros::Publisher & pubLaserCloudMap)
@@ -733,6 +783,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
 {
     double match_start = omp_get_wtime();
     laserCloudOri->clear(); 
+    laserCloudDynamic->clear();
     corr_normvect->clear(); 
     total_residual = 0.0; 
 
@@ -787,6 +838,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     }
     
     effct_feat_num = 0;
+    dynamic_feat_num = 0;
 
     for (int i = 0; i < feats_down_size; i++)
     {
@@ -796,6 +848,11 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
             corr_normvect->points[effct_feat_num] = normvec->points[i];
             total_residual += res_last[i];
             effct_feat_num ++;
+        }
+        else 
+        {
+            laserCloudDynamic->points[dynamic_feat_num] = feats_down_body->points[i];
+            dynamic_feat_num ++;
         }
     }
 
@@ -942,6 +999,10 @@ int main(int argc, char** argv)
             ("/cloud_registered_body", 100000);
     ros::Publisher pubLaserCloudEffect = nh.advertise<sensor_msgs::PointCloud2>
             ("/cloud_effected", 100000);
+    ros::Publisher pubLaserCloudDynamic = nh.advertise<sensor_msgs::PointCloud2>
+            ("/cloud_dynamic", 100000);
+    ros::Publisher pubAddPoint = nh.advertise<sensor_msgs::PointCloud2>
+            ("/cloud_added", 100000);
     ros::Publisher pubLaserCloudMap = nh.advertise<sensor_msgs::PointCloud2>
             ("/Laser_map", 100000);
     ros::Publisher pubOdomAftMapped = nh.advertise<nav_msgs::Odometry> 
@@ -1004,8 +1065,9 @@ int main(int argc, char** argv)
             lasermap_fov_segment();
 
             /*** downsample the feature points in a scan ***/
-            downSizeFilterSurf.setInputCloud(feats_undistort);
-            downSizeFilterSurf.filter(*feats_down_body);
+            // downSizeFilterSurf.setInputCloud(feats_undistort);
+            // downSizeFilterSurf.filter(*feats_down_body);
+            *feats_down_body = *feats_undistort;
             t1 = omp_get_wtime();
             feats_down_size = feats_down_body->points.size();
             /*** initialize the map kdtree ***/
@@ -1042,7 +1104,7 @@ int main(int argc, char** argv)
             fout_pre<<setw(20)<<Measures.lidar_beg_time - first_lidar_time<<" "<<euler_cur.transpose()<<" "<< state_point.pos.transpose()<<" "<<ext_euler.transpose() << " "<<state_point.offset_T_L_I.transpose()<< " " << state_point.vel.transpose() \
             <<" "<<state_point.bg.transpose()<<" "<<state_point.ba.transpose()<<" "<<state_point.grav<< endl;
 
-            if(0) // If you need to see map point, change to "if(1)"
+            if(1) // If you need to see map point, change to "if(1)"
             {
                 PointVector ().swap(ikdtree.PCL_Storage);
                 ikdtree.flatten(ikdtree.Root_Node, ikdtree.PCL_Storage, NOT_RECORD);
@@ -1076,15 +1138,16 @@ int main(int argc, char** argv)
 
             /*** add the feature points to map kdtree ***/
             t3 = omp_get_wtime();
-            map_incremental();
+            map_incremental(pubAddPoint);
             t5 = omp_get_wtime();
             
             /******* Publish points *******/
             if (path_en)                         publish_path(pubPath);
             if (scan_pub_en || pcd_save_en)      publish_frame_world(pubLaserCloudFull);
             if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body);
-            // publish_effect_world(pubLaserCloudEffect);
-            // publish_map(pubLaserCloudMap);
+            publish_effect_world(pubLaserCloudEffect);
+            publish_dynamic_world(pubLaserCloudDynamic);
+            publish_map(pubLaserCloudMap);
 
             /*** Debug variables ***/
             if (runtime_pos_log)
