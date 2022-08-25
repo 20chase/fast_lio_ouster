@@ -96,6 +96,8 @@ bool   point_selected_surf[100000] = {0};
 bool   lidar_pushed, flg_first_scan = true, flg_exit = false, flg_EKF_inited;
 bool   scan_pub_en = false, dense_pub_en = false, scan_body_pub_en = false;
 
+int point_filter_num = 1;
+
 // ======= world position =================
 
 double global_px = 0.0;
@@ -626,16 +628,16 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFull)
 void publish_frame_body(const ros::Publisher & pubLaserCloudFull_body)
 {
     int size = feats_undistort->points.size();
-    PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
+    // PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
 
-    for (int i = 0; i < size; i++)
-    {
-        RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
-                            &laserCloudIMUBody->points[i]);
-    }
+    // for (int i = 0; i < size; i++)
+    // {
+    //     RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
+    //                         &laserCloudIMUBody->points[i]);
+    // }
 
     sensor_msgs::PointCloud2 laserCloudmsg;
-    pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
+    pcl::toROSMsg(*feats_undistort, laserCloudmsg);
     laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
     laserCloudmsg.header.frame_id = "base_link";
     pubLaserCloudFull_body.publish(laserCloudmsg);
@@ -933,6 +935,7 @@ int main(int argc, char** argv)
     nh.param<int>("preprocess/scan_line", p_pre->N_SCANS, 16);
     nh.param<int>("preprocess/scan_rate", p_pre->SCAN_RATE, 10);
     nh.param<int>("point_filter_num", p_pre->point_filter_num, 2);
+    point_filter_num = p_pre->point_filter_num;
     nh.param<bool>("feature_extract_enable", p_pre->feature_enabled, false);
     nh.param<bool>("runtime_pos_log_enable", runtime_pos_log, 0);
     nh.param<bool>("mapping/extrinsic_est_en", extrinsic_est_en, true);
@@ -1065,9 +1068,17 @@ int main(int argc, char** argv)
             lasermap_fov_segment();
 
             /*** downsample the feature points in a scan ***/
-            // downSizeFilterSurf.setInputCloud(feats_undistort);
-            // downSizeFilterSurf.filter(*feats_down_body);
-            *feats_down_body = *feats_undistort;
+            downSizeFilterSurf.setInputCloud(feats_undistort);
+            feats_down_body->clear();
+            for (int i = 0; i < feats_undistort->size(); i++)
+            {
+                if (i % point_filter_num != 0) continue;
+
+                feats_down_body->push_back(feats_undistort->points[i]);
+            }
+
+            downSizeFilterSurf.filter(*feats_down_body);
+            // *feats_down_body = *feats_undistort;
             t1 = omp_get_wtime();
             feats_down_size = feats_down_body->points.size();
             /*** initialize the map kdtree ***/
