@@ -637,7 +637,7 @@ void publish_frame_body(const ros::Publisher & pubLaserCloudFull_body)
     }
 
     sensor_msgs::PointCloud2 laserCloudmsg;
-    pcl::toROSMsg(*feats_undistort, laserCloudmsg);
+    pcl::toROSMsg(*laserCloudIMUBody, laserCloudmsg);
     laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
     laserCloudmsg.header.frame_id = "base_link";
     pubLaserCloudFull_body.publish(laserCloudmsg);
