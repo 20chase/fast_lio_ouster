@@ -628,13 +628,13 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFull)
 void publish_frame_body(const ros::Publisher & pubLaserCloudFull_body)
 {
     int size = feats_undistort->points.size();
-    // PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
+    PointCloudXYZI::Ptr laserCloudIMUBody(new PointCloudXYZI(size, 1));
 
-    // for (int i = 0; i < size; i++)
-    // {
-    //     RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
-    //                         &laserCloudIMUBody->points[i]);
-    // }
+    for (int i = 0; i < size; i++)
+    {
+        RGBpointBodyLidarToIMU(&feats_undistort->points[i], \
+                            &laserCloudIMUBody->points[i]);
+    }
 
     sensor_msgs::PointCloud2 laserCloudmsg;
     pcl::toROSMsg(*feats_undistort, laserCloudmsg);
